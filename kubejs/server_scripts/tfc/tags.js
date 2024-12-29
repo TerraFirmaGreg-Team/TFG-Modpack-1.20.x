@@ -2,7 +2,7 @@
 
 const registerTFCItemTags = (event) => {
     //#region Возможность вешать инструменты GregTech на ToolRack
-    event.add('tfc:usable_on_tool_rack', '#forge:tools/swords') 
+    event.add('tfc:usable_on_tool_rack', '#forge:tools/swords')
     event.add('tfc:usable_on_tool_rack', '#forge:tools/pickaxes')
     event.add('tfc:usable_on_tool_rack', '#forge:tools/axes')
     event.add('tfc:usable_on_tool_rack', '#forge:tools/shovels')
@@ -67,16 +67,16 @@ const registerTFCItemTags = (event) => {
     //#endregion
 
     //#region Позволяет скелетам и зомбям использовать GT оружие
-    // Мечи    
+    // Мечи
     event.add('tfc:mob_mainhand_weapons', 'gtceu:bismuth_bronze_sword')
     event.add('tfc:mob_mainhand_weapons', 'gtceu:bronze_sword')
     event.add('tfc:mob_mainhand_weapons', 'gtceu:black_bronze_sword')
-    
+
     // Топоры
     event.add('tfc:mob_mainhand_weapons', 'gtceu:bismuth_bronze_axe')
     event.add('tfc:mob_mainhand_weapons', 'gtceu:bronze_axe')
     event.add('tfc:mob_mainhand_weapons', 'gtceu:black_bronze_axe')
-    
+
     // Косы
     event.add('tfc:mob_mainhand_weapons', 'gtceu:bismuth_bronze_scythe')
     event.add('tfc:mob_mainhand_weapons', 'gtceu:bronze_scythe')
@@ -114,13 +114,13 @@ const registerTFCItemTags = (event) => {
     //#region Объединяем гравий по цветам
     // Коричневый
     event.add('tfc:brown_gravel', 'tfc:rock/gravel/claystone')
-    
+
     // Белый
     event.add('tfc:white_gravel', 'tfc:rock/gravel/chalk')
     event.add('tfc:white_gravel', 'tfc:rock/gravel/diorite')
     event.add('tfc:white_gravel', 'tfc:rock/gravel/quartzite')
     event.add('tfc:white_gravel', 'tfc:rock/gravel/marble')
-    
+
     // Черный
     event.add('tfc:black_gravel', 'tfc:rock/gravel/basalt')
     event.add('tfc:black_gravel', 'tfc:rock/gravel/phyllite')
@@ -129,20 +129,20 @@ const registerTFCItemTags = (event) => {
     event.add('tfc:black_gravel', 'tfc:rock/gravel/gabbro')
     event.add('tfc:black_gravel', 'tfc:rock/gravel/dolomite')
     event.add('tfc:black_gravel', 'tfc:rock/gravel/shale')
-    
+
     // Красный
     event.add('tfc:red_gravel', 'tfc:rock/gravel/chert')
     event.add('tfc:red_gravel', 'tfc:rock/gravel/rhyolite')
-    
+
     // Желтый
     event.add('tfc:yellow_gravel', 'tfc:rock/gravel/limestone')
     event.add('tfc:yellow_gravel', 'tfc:rock/gravel/slate')
-    
+
     // Зеленый
     event.add('tfc:green_gravel', 'tfc:rock/gravel/gneiss')
     event.add('tfc:green_gravel', 'tfc:rock/gravel/conglomerate')
     event.add('tfc:green_gravel', 'tfc:rock/gravel/schist')
-    
+
     // Розовый
     event.add('tfc:pink_gravel', 'tfc:rock/gravel/granite')
     //#endregion
@@ -181,7 +181,7 @@ const registerTFCItemTags = (event) => {
     event.add('tfg:metal_chains', 'tfc:metal/chain/blue_steel')
     event.add('tfg:metal_chains', 'tfc:metal/chain/red_steel')
     //#endregion
-    
+
     //#region Теги для объединения незаверешенных ламп
     event.add('tfg:unfinished_lamps', 'tfc:metal/unfinished_lamp/bismuth_bronze')
     event.add('tfg:unfinished_lamps', 'tfc:metal/unfinished_lamp/black_bronze')
@@ -249,7 +249,7 @@ const registerTFCItemTags = (event) => {
 }
 
 const registerTFCBlockTags = (event) => {
-    
+
     //#region Теги для объединения ступеней, полублоков и стен соответственно
     global.TFC_STONE_TYPES.forEach(stoneTypeName => {
         global.TFC_ROCK_SLAB_BLOCK_TYPES.forEach(slabType => {
@@ -259,11 +259,11 @@ const registerTFCBlockTags = (event) => {
         })
     })
     //#endregion
-    
-    //#region Отключение ломания блоков установленных на полу 
+
+    //#region Отключение ломания блоков установленных на полу
     event.add('tfcdesirepaths:trample_blacklist', 'tfc:placed_item')
     //#endregion
-    
+
     //#region Возможность обрушения полу-блоков
     event.add('tfc:can_collapse', '#tfg:rock_slabs')
     event.add('tfc:can_start_collapse', '#tfg:rock_slabs')
@@ -291,7 +291,7 @@ const registerTFCBlockTags = (event) => {
     //#region Разрешаем спавн мобов на руде
     event.add('tfc:monster_spawns_on', '#forge:ores')
     //#endregion
-    
+
     //#region Разрешаем проспекторам тфк находить любые руды
     event.add('tfc:prospectable', '#forge:ores')
     //#endregion
@@ -482,7 +482,7 @@ const registerTFCFluidTags = (event) => {
         'tfc:metal/weak_blue_steel',
         'tfc:metal/unknown'
     ]
-    
+
     ALL_DISABLED_FLUIDS.forEach(fluid => {
         event.add('c:hidden_from_recipe_viewers', fluid)
     })
@@ -490,7 +490,7 @@ const registerTFCFluidTags = (event) => {
 }
 
 const registerTFCBiomeTags = (event) => {
-    
+
     //#region Создаем тег со всеми TFC биомами
     const ALL_TFC_BIOMES = [
         "tfc:badlands",
@@ -576,5 +576,64 @@ const registerTFCPlacedFeatures = (event) => {
     ALL_DISABLED_TFC_VEINS.forEach(vein => {
         event.remove('tfc:in_biome/veins', vein)
     })
+    //#endregion
+
+    //#region Setting new custom veins for TFC ore generation
+    const TFG_VEINS = [
+        'tfg:vein/deep_garnet_amethyst',
+        'tfg:vein/deep_garnet_opal',
+        'tfg:vein/deep_gold',
+        'tfg:vein/deep_hematite',
+        'tfg:vein/deep_limonite',
+        'tfg:vein/deep_magnetite',
+        'tfg:vein/deep_molybdenum',
+        'tfg:vein/deep_naquadah',
+        'tfg:vein/deep_pitchblende',
+        'tfg:vein/deep_sapphire',
+        'tfg:vein/deep_scheelite',
+        'tfg:vein/deep_sheldonite',
+        'tfg:vein/deep_topaz',
+        'tfg:vein/normal_apatite_',
+        'tfg:vein/normal_basaltic_sands',
+        'tfg:vein/normal_bauxite',
+        'tfg:vein/normal_beryllium',
+        'tfg:vein/normal_bismuthinite',
+        'tfg:vein/normal_cassiterite',
+        'tfg:vein/normal_certus_quartz',
+        'tfg:vein/normal_coal',
+        'tfg:vein/normal_copper',
+        'tfg:vein/normal_garnet_tin',
+        'tfg:vein/normal_garnierite',
+        'tfg:vein/normal_gold',
+        'tfg:vein/normal_graphite',
+        'tfg:vein/normal_hematite',
+        'tfg:vein/normal_spodumene',
+        'tfg:vein/normal_oilsands',
+        'tfg:vein/normal_lapis',
+        'tfg:vein/normal_limonite',
+        'tfg:vein/normal_lubricant',
+        'tfg:vein/normal_magnetite',
+        'tfg:vein/normal_manganese',
+        'tfg:vein/normal_mica',
+        'tfg:vein/normal_monazite',
+        'tfg:vein/normal_olivine',
+        'tfg:vein/normal_redstone',
+        'tfg:vein/normal_salt',
+        'tfg:vein/normal_saltpeter',
+        'tfg:vein/normal_silver',
+        'tfg:vein/normal_sphalerite',
+        'tfg:vein/normal_sulfur',
+        'tfg:vein/normal_tetrahedrite',
+        'tfg:vein/surface_bismuthinite',
+        'tfg:vein/surface_cassiterite',
+        'tfg:vein/surface_copper',
+        'tfg:vein/surface_sphalerite',
+        'tfg:vein/surface_tetrahedrite',
+        'tfg:geode'
+    ];
+
+    TFG_VEINS.forEach(vein => {
+        event.add('tfc:in_biome/veins', vein);
+    });
     //#endregion
 }
