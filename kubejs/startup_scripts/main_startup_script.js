@@ -6,6 +6,8 @@
 StartupEvents.registry('item', event => {
     registerGregTechItems(event)
     registerMinecraftItems(event)
+    // registerGTCEuItems(event)
+    registerTFGItems(event)
 })
 
 /**
@@ -13,6 +15,8 @@ StartupEvents.registry('item', event => {
  */
 StartupEvents.registry('block', event => {
     registerGregTechBlocks(event)
+    // registerGTCEuBlocks(event)
+    registerTFGBlocks(event)    
 })
 
 /**
@@ -28,7 +32,9 @@ ItemEvents.modification(event => {})
 /**
  * Событие регистрации жидкостей.
  */
-StartupEvents.registry('fluid', event => {})
+StartupEvents.registry('fluid', event => {
+    registerTFGFluids(event)
+})
 
 /**
  * Событие регистрации типов рецептов.
@@ -47,8 +53,13 @@ GTCEuStartupEvents.registry('gtceu:machine', event => {
 /**
  * Событие регистрации слоев пород GTM.
  */
-GTCEuStartupEvents.registry('gtceu:world_gen_layer', event => {
-    registerGregTechWorldGenLayers(event)
+// GTCEuStartupEvents.registry('gtceu:world_gen_layer', event => {
+//     registerGregTechWorldGenLayers(event)
+// })
+
+GTCEuStartupEvents.registry('gtceu:material', event =>
+{
+    registerTFGMaterials(event)
 })
 
 /**
@@ -57,3 +68,6 @@ GTCEuStartupEvents.registry('gtceu:world_gen_layer', event => {
 TFGStartupEvents.materialInfo(event => {
     registerGregTechMaterialInfo(event)
 })
+// TFGStartupEvents.materialInfo(event => {
+//     registerGTCEuMaterialInfo(event)
+// })

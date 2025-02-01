@@ -44,7 +44,7 @@ const registerGregTechRecipes = (e) => {
             const gemItem = ChemicalHelper.get(TagPrefix.gem, material, 1)
             if (gemItem.isEmpty()) return
 
-            e.recipes.gtceu.extruder(`tfg:engrave_${material.getName()}_gem_to_${new String(headTagPrefix.name).toLowerCase()}_head`)             
+            e.recipes.gtceu.laser_engraver(`tfg:engrave_${material.getName()}_gem_to_${new String(headTagPrefix.name).toLowerCase()}_head`)             
                 .itemInputs(gemItem.copyWithCount(Math.floor(headTagPrefix.materialAmount() / GTValues.M)))
                 .notConsumable(ChemicalHelper.get(TagPrefix.lens, GTMaterials.Glass, 1))
                 .circuit(cirucitMeta)
@@ -84,25 +84,30 @@ const registerGregTechRecipes = (e) => {
     }
 
     const processIngot = (tagPrefix, material) => {
-        const ingotItem = ChemicalHelper.get(tagPrefix, material, 1)
+        const ingotStack = ChemicalHelper.get(tagPrefix, material, 1)
 
         if (material.hasFlag(MaterialFlags.GENERATE_PLATE) && material != GTMaterials.Wood && material != GTMaterials.TreatedWood && !material.hasProperty(PropertyKey.POLYMER)) 
         {
             const plateStack = ChemicalHelper.get(TagPrefix.plate, material, 1)
             const blockStack = ChemicalHelper.get(TagPrefix.block, material, 1)
+            let smallDustStack = ChemicalHelper.get(TagPrefix.dustSmall, material, 1)
 
             let matAmount = TagPrefix.block.getMaterialAmount(material) / GTValues.M;
 
             if (!plateStack.isEmpty()) {
                 
                 // Слиток -> Стержень
-                e.recipes.createPressing(plateStack.withChance(0.8), ingotItem)
-                    .id(`tfg:pressing/${material.getName()}_plate`)
+                e.recipes.createSequencedAssembly([plateStack.withChance(4), smallDustStack], ingotStack,[
+                    e.recipes.createPressing(ingotStack, ingotStack)
+                ])
+                .transitionalItem(ingotStack)
+                .loops(1)
+                .id(`tfg:pressing/${material.getName()}_plate`);
     
                 if (!blockStack.isEmpty() && GTMaterials.Stone != material) {
                     
                     // 9х Слиток -> Блок
-                    e.recipes.createCompacting(blockStack, ingotItem.withCount(matAmount))
+                    e.recipes.createCompacting(blockStack, ingotStack.withCount(matAmount))
                         .heated()
                         .id(`tfg:compacting/${material.getName()}_block`)
                 }
@@ -167,6 +172,54 @@ const registerGregTechRecipes = (e) => {
         if (item.isEmpty()) return
 
         e.remove({ id: `gtceu:shaped/stick_long_stick_${material.getName()}` })
+    }
+
+    const processIngotDouble = (tagPrefix, material) => {
+        const doubleIngotStack = ChemicalHelper.get(tagPrefix, material, 1);
+        const dustStack = ChemicalHelper.get(TagPrefix.dust, material, 2);
+        
+        if (!material.hasProperty(PropertyKey.FLUID)) {
+            console.log(`${material.getName()} has no related fluid`)
+            return
+        }
+
+        e.recipes.gtceu.extractor(`tfg:extract_${material.getName()}_double_ingot`)
+            .itemInputs(doubleIngotStack)
+            .outputFluids(Fluid.of(material.getFluid(), 288))
+            .duration(material.getMass())
+            .EUt(GTValues.VA[GTValues.ULV])
+
+        if (!material.hasProperty(PropertyKey.DUST))
+            console.log(`${material.getName()} has no related dust`)
+
+        e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_double_ingot`)
+            .itemInputs(doubleIngotStack)
+            .itemOutputs(dustStack)
+            .duration(material.getMass())
+            .EUt(GTValues.VA[GTValues.ULV])
+
+    }
+
+    const processSmallOre = (tagPrefix, material) => {
+        const smallOre = ChemicalHelper.get(tagPrefix, material, 1)
+        const smallDust = ChemicalHelper.get(TagPrefix.dustSmall, material, 1);
+
+        e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_small_ore`)
+            .itemInputs(smallOre)
+            .itemOutputs(smallDust)
+            .duration(material.getMass())
+            .EUt(GTValues.VA[GTValues.ULV])
+    }
+
+    const processSmallNativeOre = (tagPrefix, material) => {
+        const smallNativeOre = ChemicalHelper.get(tagPrefix, material, 1)
+        const smallDust = ChemicalHelper.get(TagPrefix.dustSmall, material, 1);
+
+        e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_small_native_ore`)
+            .itemInputs(smallNativeOre)
+            .itemOutputs(smallDust)
+            .duration(material.getMass())
+            .EUt(GTValues.VA[GTValues.ULV])
     }
 
     const processPoorRawOre = (tagPrefix, material) => {
@@ -307,6 +360,11 @@ const registerGregTechRecipes = (e) => {
         const toolProperty = material.getProperty(PropertyKey.TOOL)
         const ingotProperty = material.getProperty(PropertyKey.INGOT)
         const oreProperty = material.getProperty(PropertyKey.ORE)
+        const anvilStack = ChemicalHelper.get(TFGTagPrefix.anvil, material, 1)
+        const finishedLampStack = ChemicalHelper.get(TFGTagPrefix.lamp, material, 1)
+        const trapdoorStack = ChemicalHelper.get(TFGTagPrefix.trapdoor, material, 1)
+        const chainStack = ChemicalHelper.get(TFGTagPrefix.chain, material, 1)
+        const bellStack = ChemicalHelper.get(TFGTagPrefix.bell, material, 1)
 
         if (toolProperty != null) {
             makeToolRecipe(GTToolType.SWORD, TFGTagPrefix.toolHeadSword, 'tfg:sword_head_extruder_mold', 1, material)
@@ -339,9 +397,12 @@ const registerGregTechRecipes = (e) => {
             processBlock(TagPrefix.block, material)
             processRod(TagPrefix.rod, material)
             processRodLong(TagPrefix.rodLong, material)
+            processIngotDouble(TFGTagPrefix.ingotDouble, material)
         }
 
         if (oreProperty != null) {
+            processSmallOre(TFGTagPrefix.oreSmall, material)
+            processSmallNativeOre(TFGTagPrefix.oreSmallNative, material)
             processPoorRawOre(TFGTagPrefix.poorRawOre, material)
             processNormalRawOre(TagPrefix.rawOre, material)
             processRichRawOre(TFGTagPrefix.richRawOre, material)
@@ -351,8 +412,198 @@ const registerGregTechRecipes = (e) => {
             processPureDust(TagPrefix.dustPure, material)
             processDust(TagPrefix.dust, material)
         }
+
+        if (anvilStack != null) {
+
+            const dustStack = ChemicalHelper.get(TagPrefix.dust, material, 14)
+            e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_anvil`)
+                .itemInputs(anvilStack)
+                .itemOutputs(dustStack)
+                .duration(material.getMass() * 32)
+                .EUt(GTValues.VA[GTValues.LV])
+            e.recipes.gtceu.arc_furnace(`tfg:arc_${material.getName()}_anvil`)
+                .itemInputs(anvilStack)
+                .itemOutputs(dustStack)
+                .duration(material.getMass() * 32)
+                .EUt(GTValues.VA[GTValues.ULV])
+
+        }
+
+        if (finishedLampStack != null) {
+            // GTRecipeTypes.MACERATOR_RECIPES.recipeBuilder(
+            //     TerraFirmaGreg.id("macerate_" + material.getName() + "_lamp"), new Object[0])
+            //     .EUt((long)GTValues.VA[1])
+            //     .duration((int)outputMaterial.getMass() * 8)
+            //     .inputItems(finishedLamp)
+            //     .outputItems(new ItemStack[]{ChemicalHelper.get(TagPrefix.dust, outputMaterial), ChemicalHelper.get(TagPrefix.dust, GTMaterials.Glass, 4)})
+            //     .save(provider);
+            const materialDustStack = ChemicalHelper.get(TagPrefix.dust, material, 1)
+            const materialIngotStack = ChemicalHelper.get(TagPrefix.ingot, material, 1)
+            const glassDustStack = ChemicalHelper.get(TagPrefix.dust, GTMaterials.Glass, 4)
+            const unfinishedLampStack = ChemicalHelper.get(TFGTagPrefix.lampUnfinished, material, 1)
+
+            e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_lamp`)
+                .itemInputs(finishedLampStack)
+                .itemOutputs([materialDustStack, glassDustStack])
+                .duration(material.getMass() * 8)
+                .EUt(GTValues.VA[GTValues.LV])
+
+            e.recipes.gtceu.arc_furnace(`tfg:arc_${material.getName()}_lamp`)
+                .itemInputs(finishedLampStack)
+                .itemOutputs([materialIngotStack, glassDustStack])
+                .duration(material.getMass() * 8)
+                .EUt(GTValues.VA[GTValues.ULV])
+
+            e.recipes.gtceu.assembler(`tfg:${material.getName()}_lamp`)
+                .itemInputs("tfc:lamp_glass", unfinishedLampStack)
+                .itemOutputs(finishedLampStack)
+                .duration(material.getMass() * 7)
+                .circuit(12)
+                .EUt(GTValues.VA[GTValues.ULV])
+
+            e.recipes.gtceu.assembler(`tfg:${material.getName()}_lamp_from_liquid`)
+                .itemInputs(unfinishedLampStack)
+                .inputFluids(Fluid.of(GTMaterials.Glass.getFluid(), 576))
+                .itemOutputs(finishedLampStack)
+                .duration(material.getMass() * 7)
+                .circuit(13)
+                .EUt(GTValues.VA[GTValues.ULV])
+
+            e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_unfinished_lamp`)
+                .itemInputs(unfinishedLampStack)
+                .itemOutputs(materialDustStack)
+                .duration(material.getMass() * 8)
+                .EUt(GTValues.VA[GTValues.LV])
+
+            e.recipes.gtceu.arc_furnace(`tfg:arc_${material.getName()}_unfinished_lamp`)
+                .itemInputs(unfinishedLampStack)
+                .itemOutputs([materialIngotStack, glassDustStack])
+                .duration(material.getMass() * 8)
+                .EUt(GTValues.VA[GTValues.ULV])
+
+        }
         
+        if (trapdoorStack != null) {
+            const materialDustStack = ChemicalHelper.get(TagPrefix.dust, material, 1)
+            const materialIngotStack = ChemicalHelper.get(TagPrefix.ingot, material, 1)
+    
+            e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_trapdoor`)
+                .itemInputs(trapdoorStack)
+                .itemOutputs(materialDustStack)
+                .duration(material.getMass() * 7)
+                .EUt(GTValues.VA[GTValues.LV])
+
+            e.recipes.gtceu.arc_furnace(`tfg:arc_${material.getName()}_trapdoor`)
+                .itemInputs(trapdoorStack)
+                .itemOutputs(materialIngotStack)
+                .duration(material.getMass() * 7)
+                .EUt(GTValues.VA[GTValues.ULV])
+        }
+
+        if (chainStack != null) {
+            const materialDustTinyStack = ChemicalHelper.get(TagPrefix.dustTiny, material, 1)
+            const materialNuggetStack = ChemicalHelper.get(TagPrefix.nugget, material, 1)
+    
+            e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_chain`)
+                .itemInputs(chainStack)
+                .itemOutputs(materialDustTinyStack)
+                .duration(material.getMass() * 3)
+                .EUt(GTValues.VA[GTValues.LV])
+
+            e.recipes.gtceu.arc_furnace(`tfg:arc_${material.getName()}_chain`)
+                .itemInputs(chainStack)
+                .itemOutputs(materialNuggetStack)
+                .duration(material.getMass() * 3)
+                .EUt(GTValues.VA[GTValues.ULV])
+        }
+
+        if (bellStack != null) {
+            const materialDustStack = ChemicalHelper.get(TagPrefix.dust, material, 1)
+            const materialIngotStack = ChemicalHelper.get(TagPrefix.ingot, material, 1)
+    
+            e.recipes.gtceu.macerator(`tfg:macerate_${material.getName()}_bell`)
+                .itemInputs(bellStack)
+                .itemOutputs(materialDustStack)
+                .duration(material.getMass() * 5)
+                .EUt(GTValues.VA[GTValues.LV])
+
+            e.recipes.gtceu.arc_furnace(`tfg:arc_${material.getName()}_bell`)
+                .itemInputs(bellStack)
+                .itemOutputs(materialIngotStack)
+                .duration(material.getMass() * 5)
+                .EUt(GTValues.VA[GTValues.ULV])
+        }
+
     })
+
+    //#region Выход: Удобрение
+    // В обычном миксере
+    e.recipes.gtceu.mixer('fertilizer')             
+        .itemInputs(
+            '#tfc:dirt',
+            '2x #tfg:wood_dusts',
+            '4x #forge:sand'
+        )
+        .circuit(1)
+        .inputFluids(Fluid.of('minecraft:water', 1000))
+        .itemOutputs('4x gtceu:fertilizer')
+        .duration(300)
+        .EUt(30)
+
+    // В create миксере
+    e.recipes.gtceu.create_mixer('fertilizer')             
+        .itemInputs(
+            '#tfc:dirt',
+            '2x #tfg:wood_dusts',
+            '4x #forge:sand'
+        )
+        .circuit(1)
+        .inputFluids(Fluid.of('minecraft:water', 1000))
+        .itemOutputs('4x gtceu:fertilizer')
+        .duration(300)
+        .EUt(30)
+        .rpm(96)
+
+    //#endregion
+
+    //#region Выход: Кварцевый песок
+
+    e.shaped('gtceu:quartz_sand_dust', [
+        'A', 
+        'B'
+    ], {
+        A: '#forge:sand',
+        B: '#forge:tools/mortars'
+    }).id('gtceu:shaped/quartz_sand')
+
+    e.recipes.gtceu.macerator('quartz_sand_from_sand')             
+        .itemInputs('#forge:sand')
+        .itemOutputs('gtceu:quartz_sand_dust')
+        .duration(30)
+        .EUt(2)
+
+    //#endregion
+
+    e.recipes.gtceu.macerator('flux')
+        .itemInputs('#tfc:fluxstone')
+        .itemOutputs('2x tfc:powder/flux')
+        .duration(30)
+        .EUt(2)
+
+    e.recipes.gtceu.forge_hammer('flux')
+        .itemInputs('#tfc:fluxstone')
+        .itemOutputs('2x tfc:powder/flux')
+        .duration(30)
+        .EUt(2)
+
+    //#region Выход: Диоксид силикона
+
+    e.recipes.gtceu.electrolyzer('sand_electrolysis')             
+        .itemInputs('8x #forge:sand')
+        .itemOutputs('gtceu:silicon_dioxide_dust')
+        .duration(500)
+        .EUt(25)
+
     //#endregion
 
     //#region Рецепты декрафта пыли каменных пород
@@ -1914,6 +2165,44 @@ const registerGregTechRecipes = (e) => {
         .inputFluids(Fluid.of('gtceu:lubricant', 20), Fluid.of('minecraft:water', 4000))
         .outputFluids(Fluid.of('gtceu:drilling_fluid', 5000))
         .EUt(16).duration(65)
+    // Удаление рецептов связанных с Primitive Blast Furnace
+    e.remove({ id: 'gtceu:arc_furnace/arc_primitive_blast_furnace' })
+    e.remove({ id: 'gtceu:macerator/macerate_primitive_blast_furnace' })
+
+    // Удаление рецепта беск. воды кавера
+    e.remove('gtceu:assembler/cover_infinite_water')
+
+    // Удаление рецептов помпы
+    e.remove('gtceu:shaped/pump_deck')
+    e.remove('gtceu:shaped/pump_hatch')
+    e.remove('gtceu:shaped/primitive_pump')
+
+    // Удаление рецептов связанных с Barrel
+    e.remove({ id: 'gtceu:shaped/wooden_barrel' })
+    e.remove({ id: 'gtceu:assembler/wood_barrel' })
+    e.remove({ id: 'gtceu:arc_furnace/arc_wood_drum' })
+    e.remove({ id: 'gtceu:macerator/macerate_wood_drum' })
+ 
+    // Удаление рецептов связанных с FireBricks
+    e.remove({id: 'gtceu:shaped/casing_primitive_bricks' })
+    e.remove({id: 'gtceu:macerator/macerate_firebricks' })
+    e.remove({id: 'gtceu:extractor/extract_primitive_bricks' })
+
+    // Удаление рецептов связанных с FireBrick
+    e.remove({ id: 'gtceu:smelting/fireclay_brick' })
+    e.remove({ id: 'gtceu:macerator/macerate_firebrick' })
+
+    // TODO: Удалить после фикса GTCEu
+    e.remove({ id: 'gtceu:extractor/extract_raw_rubber_dust' })
+
+    // Пыль звезды незера 
+    e.recipes.gtceu.chemical_reactor('tfg:gtceu/nether_star_dust')             
+        .itemInputs('2x #forge:dusts/iridium', '#forge:dusts/diamond')
+        .circuit(10)
+        .itemOutputs('gtceu:nether_star_dust')
+        .inputFluids(Fluid.of('gtceu:nether_air', 1000))
+        .duration(700)
+        .EUt(2720)
 
     e.remove({ id: 'gtceu:mixer/drilling_fluid_distilled' })
     e.recipes.gtceu.mixer('tfg:drilling_fluid_distilled')
@@ -2176,6 +2465,30 @@ const registerGregTechRecipes = (e) => {
     //#region Огнеупорные кирпичи (предмет)
     e.remove({ id: 'gtceu:smelting/fireclay_brick' })
     e.remove({ id: 'gtceu:extractor/extract_primitive_bricks' })
+
+    //#region Рецепты электрического генератора
+
+    e.recipes.gtceu.alternator('lv_alternator')
+	    .inputStress(8192)
+        .circuit(1)
+        .rpm(256)
+        .duration(2)
+        .outputEU(128)
+
+    e.recipes.gtceu.alternator('mv_alternator')
+		.inputStress(32768)
+        .circuit(2)
+        .rpm(256)
+        .duration(2)
+        .outputEU(512)
+
+    e.recipes.gtceu.alternator('hv_alternator')
+		.inputStress(131072)
+        .circuit(3)
+        .rpm(256)
+        .duration(2)
+        .outputEU(2048)
+    
     //#endregion
 
     //#region Огнеупорные кирпичи (блок)
@@ -2189,6 +2502,130 @@ const registerGregTechRecipes = (e) => {
     //#region Кальцитовая пыль
     e.remove({ id: 'gtceu:macerator/macerate_calcite' })
     //#endregion
+    //#region LV casings and hulls
+	
+	e.replaceInput('gtceu:shaped/casing_lv', '#forge:plates/red_steel', '#forge:plates/steel')
+	e.replaceInput('gtceu:shaped/casing_lv', '#forge:plates/blue_steel', '#forge:plates/steel')
+	e.replaceInput('gtceu:shaped/lv_machine_hull', '#forge:plates/wrought_iron', '#forge:plates/red_steel')
+		
+    // Replace red steel outputs with 8x steel, delete blue steel outputs.
+    e.replaceOutput(
+        [/gtceu:arc_furnace\/arc_lv_.*/, 'gtceu:arc_furnace/arc_maintenance_hatch'],
+        '#forge:ingots/red_steel', '8x #forge:ingots/steel')
+
+    e.replaceOutput(
+        [/gtceu:arc_furnace\/arc_lv_.*/, 'gtceu:arc_furnace/arc_maintenance_hatch'],
+        '#forge:ingots/blue_steel', '')
+
+    e.replaceOutput(
+        [/gtceu:macerator\/macerate_lv_.*/, 'gtceu:macerator/macerate_maintenance_hatch'],
+        '#forge:dusts/red_steel', '8x #forge:dusts/steel')
+
+    e.replaceOutput(
+        [/gtceu:macerator\/macerate_lv_.*/, 'gtceu:macerator/macerate_maintenance_hatch'],
+        '#forge:dusts/blue_steel', '')
+		
+	e.replaceOutput(
+		['gtceu:arc_furnace/arc_configurable_maintenance_hatch', 'gtceu:arc_furnace/arc_auto_maintenance_hatch'],
+		['#forge:ingots/blue_steel', '#forge:ingots/red_steel'], '8x #forge:ingots/steel')
+		
+	//#endregion
+		
+	//#region make colored steel a bit easier to compensate
+		
+	e.recipes.gtceu.arc_furnace('tfg:black_steel_dust_to_ingot')
+		.itemInputs('gtceu:black_steel_dust')
+		.itemOutputs('gtceu:black_steel_ingot')
+		.inputFluids(Fluid.of('gtceu:oxygen', 72))
+		.duration(500)
+		.EUt(24)
+		
+	e.recipes.gtceu.arc_furnace('tfg:red_steel_dust_to_ingot')
+		.itemInputs('gtceu:red_steel_dust')
+		.itemOutputs('gtceu:red_steel_ingot')
+		.inputFluids(Fluid.of('gtceu:oxygen', 72))
+		.duration(700)
+		.EUt(32)
+		
+	e.recipes.gtceu.arc_furnace('tfg:blue_steel_dust_to_ingot')
+		.itemInputs('gtceu:blue_steel_dust')
+		.itemOutputs('gtceu:blue_steel_ingot')
+		.inputFluids(Fluid.of('gtceu:oxygen', 72))
+		.duration(700)
+		.EUt(32)
+		
+	//#endregion
+	
+	//#region add regular furnace recipes for other tfc alloys
+	
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_bismuth_bronze' })
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_bismuth_bronze_gas' })
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_black_bronze' })
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_black_bronze_gas' })
+	e.remove({id: 'gtceu:vacuum_freezer/cool_hot_black_bronze_ingot' })
+	e.remove({id: 'gtceu:vacuum_freezer/black_bronze' })
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_sterling_silver' })
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_sterling_silver_gas' })
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_rose_gold' })
+	e.remove({id: 'gtceu:electric_blast_furnace/blast_rose_gold_gas' })
+		
+	e.recipes.gtceu.electric_furnace('tfg:bismuth_bronze_dust_to_ingot')
+		.itemInputs('gtceu:bismuth_bronze_dust')
+		.itemOutputs('gtceu:bismuth_bronze_ingot')
+		.duration(200)
+		.EUt(16)
+		
+	e.recipes.gtceu.electric_furnace('tfg:black_bronze_dust_to_ingot')
+		.itemInputs('gtceu:black_bronze_dust')
+		.itemOutputs('gtceu:black_bronze_ingot')
+		.duration(200)
+		.EUt(16)
+		
+	e.recipes.gtceu.electric_furnace('tfg:sterling_silver_dust_to_ingot')
+		.itemInputs('gtceu:sterling_silver_dust')
+		.itemOutputs('gtceu:sterling_silver_ingot')
+		.duration(300)
+		.EUt(20)
+		
+	e.recipes.gtceu.electric_furnace('tfg:rose_gold_dust_to_ingot')
+		.itemInputs('gtceu:rose_gold_dust')
+		.itemOutputs('gtceu:rose_gold_ingot')
+		.duration(300)
+		.EUt(20)
+	
+	//#endregion
+  
+    // Add circuit to assembler recipe for redstone lamp.
+    // Avoids conflict with AE2 smart cables.
+    e.remove({ id: 'gtceu:assembler/redstone_lamp' })
+    e.recipes.gtceu.assembler('redstone_lamp')
+        .itemInputs('4x #forge:dusts/redstone', '4x #forge:dusts/glowstone')
+        .itemOutputs('1x minecraft:redstone_lamp')
+        .circuit(1)
+        .duration(100)
+        .EUt(1)
+
+    //#region Рецепты, которые итерируются по всем материалам
+
+    // GTMaterialRegistry.getRegisteredMaterials().forEach(material => {
+    //     //#region Рецепты инструментов
+        
+    //     if (material.hasFlag(TFGMaterialFlags.HAS_TFC_TOOL)) {
+    //         global.GTCEU_ANVIL_TOOL_TYPES.forEach(toolType => {
+    //             let toolStack = ToolHelper.get(toolType, material)
+
+    //             e.recipes.tfc.advanced_shaped_crafting(TFC.itemStackProvider.of(toolStack).copyForgingBonus(), [
+    //                 'A',
+    //                 'B'
+    //             ], {
+    //                 A: `gtceu:${material.getName()}_${toolType.name}_head`,
+    //                 B: '#forge:rods/wooden'
+    //             }, 0, 0).id(`gtceu:shaped/${toolType.name}_${material.getName()}`)
+    
+    //         })
+    //     }
+    
+        //#endregion
 
     //#region TODO: Не работает из-за магического бага / Вырезка из резины
 
@@ -2196,4 +2633,392 @@ const registerGregTechRecipes = (e) => {
     //    .ingredient('gtceu:rubber_plate')
 
     //#endregion
+	
+
+    // Clear NBT on tanks with shapeless crafts.
+    const TANK_NAMES = [
+        "lv_super",
+        "mv_super",
+        "hv_super",
+        "ev_super",
+        "iv_quantum",
+        "luv_quantum",
+        "zpm_quantum",
+        "uv_quantum",
+        "uhv_quantum",
+    ]
+
+    TANK_NAMES.forEach(prefix => {
+        // Craft super tanks to remove their NBT data.
+        e.shapeless(`gtceu:${prefix}_tank`, [`gtceu:${prefix}_tank`])
+        // Craft super chests to remove their NBT data.
+        e.shapeless(`gtceu:${prefix}_chest`, [`gtceu:${prefix}_chest`])
+    })
+	
+	// red alloy, because crucible always makes 4+1=5
+	
+	e.remove({id: 'gtceu:mixer/red_alloy' })
+	e.recipes.gtceu.mixer('tfg:red_alloy_mixer')
+		.itemInputs('1x gtceu:copper_dust', '4x minecraft:redstone')
+		.itemOutputs('5x gtceu:red_alloy_dust')
+		.circuit(2)
+		.duration(100)
+		.EUt(7)
+	
+	e.remove({id: 'gtceu:centrifuge/red_alloy_separation' })
+	e.recipes.gtceu.centrifuge('tfg:red_alloy_separation')
+		.itemInputs('5x gtceu:red_alloy_dust')
+		.itemOutputs('1x gtceu:copper_dust', '4x minecraft:redstone')
+		.duration(900)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:alloy_smelter/copper_dust_and_redstone_dust_into_red_alloy' })
+	e.recipes.gtceu.alloy_smelter('tfg:copper_dust_and_redstone_dust_into_red_alloy')
+		.itemInputs('1x gtceu:copper_dust', '4x minecraft:redstone')
+		.itemOutputs('5x gtceu:red_alloy_ingot')
+		.duration(50)
+		.EUt(16)
+		
+	e.remove({id: 'gtceu:alloy_smelter/annealed_copper_dust_and_redstone_dust_into_red_alloy' })
+	e.recipes.gtceu.alloy_smelter('tfg:annealed_copper_dust_and_redstone_dust_into_red_alloy')
+		.itemInputs('1x gtceu:annealed_copper_dust', '4x minecraft:redstone')
+		.itemOutputs('5x gtceu:red_alloy_ingot')
+		.duration(50)
+		.EUt(16)
+		
+	e.remove({id: 'gtceu:alloy_smelter/copper_ingot_and_redstone_dust_into_red_alloy' })
+	e.recipes.gtceu.alloy_smelter('tfg:copper_ingot_and_redstone_dust_into_red_alloy')
+		.itemInputs('1x minecraft:copper_ingot', '4x minecraft:redstone')
+		.itemOutputs('5x gtceu:red_alloy_ingot')
+		.duration(50)
+		.EUt(16)
+		
+	e.remove({id: 'gtceu:alloy_smelter/annealed_copper_ingot_and_redstone_dust_into_red_alloy' })
+	e.recipes.gtceu.alloy_smelter('tfg:annealed_copper_ingot_and_redstone_dust_into_red_alloy')
+		.itemInputs('1x gtceu:annealed_copper_ingot', '4x minecraft:redstone')
+		.itemOutputs('5x gtceu:red_alloy_ingot')
+		.duration(50)
+		.EUt(16)
+	
+	// steam machines
+		
+	e.remove({id: 'gtceu:arc_furnace/arc_hp_steam_forge_hammer' })
+	e.recipes.gtceu.arc_furnace('tfg:arc_hp_steam_forge_hammer')
+		.itemInputs('1x gtceu:hp_steam_forge_hammer')
+		.itemOutputs('8x gtceu:wrought_iron_ingot', '3x gtceu:steel_ingot', '2x gtceu:tin_alloy_ingot')
+		.duration(3310)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:macerator/macerate_hp_steam_forge_hammer' })
+	e.recipes.gtceu.macerator('tfg:macerate_hp_steam_forge_hammer')
+		.itemInputs('1x gtceu:hp_steam_forge_hammer')
+		.itemOutputs('8x gtceu:iron_dust', '3x gtceu:steel_dust', '2x gtceu:tin_alloy_dust', '12x gtceu:brick_dust')
+		.duration(3254)
+		.EUt(8)
+		
+	e.remove({id: 'gtceu:arc_furnace/arc_hp_steam_extractor' })
+	e.recipes.gtceu.arc_furnace('tfg:arc_hp_steam_extractor')
+		.itemInputs('1x gtceu:hp_steam_extractor')
+		.itemOutputs('7x gtceu:wrought_iron_ingot', '2x gtceu:steel_ingot', '3x gtceu:tin_alloy_ingot')
+		.duration(3310)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:macerator/macerate_hp_steam_extractor' })
+	e.recipes.gtceu.macerator('tfg:macerate_hp_steam_extractor')
+		.itemInputs('1x gtceu:hp_steam_extractor')
+		.itemOutputs('7x gtceu:iron_dust', '2x gtceu:steel_dust', '3x gtceu:tin_alloy_dust', '12x gtceu:brick_dust')
+		.duration(3254)
+		.EUt(8)
+		
+	e.remove({id: 'gtceu:arc_furnace/arc_hp_steam_macerator' })
+	e.recipes.gtceu.arc_furnace('tfg:arc_hp_steam_macerator')
+		.itemInputs('1x gtceu:hp_steam_macerator')
+		.itemOutputs('8x gtceu:wrought_iron_ingot', '3x gtceu:steel_ingot', '2x gtceu:tin_alloy_ingot')
+		.duration(3310)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:macerator/macerate_hp_steam_macerator' })
+	e.recipes.gtceu.macerator('tfg:macerate_hp_steam_macerator')
+		.itemInputs('1x gtceu:hp_steam_macerator')
+		.itemOutputs('8x gtceu:iron_dust', '3x gtceu:steel_dust', '2x gtceu:tin_alloy_dust', '12x gtceu:brick_dust')
+		.duration(3254)
+		.EUt(8)
+		
+	e.remove({id: 'gtceu:arc_furnace/arc_hp_steam_compressor' })
+	e.recipes.gtceu.arc_furnace('tfg:arc_hp_steam_compressor')
+		.itemInputs('1x gtceu:hp_steam_compressor')
+		.itemOutputs('7x gtceu:wrought_iron_ingot', '1x gtceu:steel_ingot', '5x gtceu:tin_alloy_ingot')
+		.duration(3310)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:macerator/macerate_hp_steam_compressor' })
+	e.recipes.gtceu.macerator('tfg:macerate_hp_steam_compressor')
+		.itemInputs('1x gtceu:hp_steam_compressor')
+		.itemOutputs('7x gtceu:iron_dust', '1x gtceu:steel_dust', '5x gtceu:tin_alloy_dust', '12x gtceu:brick_dust')
+		.duration(3254)
+		.EUt(8)
+		
+	e.remove({id: 'gtceu:arc_furnace/arc_hp_steam_furnace' })
+	e.recipes.gtceu.arc_furnace('tfg:arc_hp_steam_furnace')
+		.itemInputs('1x gtceu:hp_steam_furnace')
+		.itemOutputs('7x gtceu:wrought_iron_ingot', '2x gtceu:steel_ingot', '4x gtceu:tin_alloy_ingot')
+		.duration(3310)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:macerator/macerate_hp_steam_furnace' })
+	e.recipes.gtceu.macerator('tfg:macerate_hp_steam_furnace')
+		.itemInputs('1x gtceu:hp_steam_furnace')
+		.itemOutputs('7x gtceu:iron_dust', '2x gtceu:steel_dust', '4x gtceu:tin_alloy_dust', '12x gtceu:brick_dust')
+		.duration(3254)
+		.EUt(8)
+		
+	e.remove({id: 'gtceu:arc_furnace/arc_hp_steam_alloy_smelter' })
+	e.recipes.gtceu.arc_furnace('tfg:arc_hp_steam_alloy_smelter')
+		.itemInputs('1x gtceu:hp_steam_alloy_smelter')
+		.itemOutputs('11x gtceu:wrought_iron_ingot', '1x gtceu:steel_ingot', '1x gtceu:tin_alloy_ingot')
+		.duration(3310)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:macerator/macerate_hp_steam_alloy_smelter' })
+	e.recipes.gtceu.macerator('tfg:macerate_hp_steam_alloy_smelter')
+		.itemInputs('1x gtceu:hp_steam_alloy_smelter')
+		.itemOutputs('11x gtceu:iron_dust', '1x gtceu:steel_dust', '1x gtceu:tin_alloy_dust', '12x gtceu:brick_dust')
+		.duration(3254)
+		.EUt(8)
+		
+	e.remove({id: 'gtceu:arc_furnace/arc_hp_steam_rock_crusher' })
+	e.recipes.gtceu.arc_furnace('tfg:arc_hp_steam_rock_crusher')
+		.itemInputs('1x gtceu:hp_steam_rock_crusher')
+		.itemOutputs('10x gtceu:wrought_iron_ingot', '1x gtceu:steel_ingot', '2x gtceu:tin_alloy_ingot')
+		.duration(3310)
+		.EUt(30)
+		
+	e.remove({id: 'gtceu:macerator/macerate_hp_steam_rock_crusher' })
+	e.recipes.gtceu.macerator('tfg:macerate_hp_steam_rock_crusher')
+		.itemInputs('1x gtceu:hp_steam_rock_crusher')
+		.itemOutputs('10x gtceu:iron_dust', '1x gtceu:steel_dust', '2x gtceu:tin_alloy_dust', '12x gtceu:brick_dust')
+		.duration(3254)
+		.EUt(8)
+	
+	//#endregion
+
+    //#region Quantum mainframe stack fix.
+    //
+    // Quantum Mainframes need 48x annealed copper wire but
+    // the stacking limit is 32 so instead allow 24x 2x.
+    //
+    // Frustratingly e.replaceInput doesn't allow for
+    // changing item counts, only types.
+    e.remove(/gtceu:circuit_assembler\/quantum_mainframe_zpm.*/)
+    e.recipes.gtceu.circuit_assembler('quantum_mainframe_zpm')
+        .itemInputs(
+            '2x gtceu:hssg_frame',
+            '2x gtceu:quantum_processor_computer',
+            '48x gtceu:smd_capacitor',
+            '24x gtceu:smd_inductor',
+            '24x gtceu:ram_chip',
+            '24x gtceu:annealed_copper_double_wire')
+        .inputFluids(Fluid.of('gtceu:tin', 576))
+        .itemOutputs('gtceu:quantum_processor_mainframe')
+        .duration(800)
+        .EUt(7680)
+
+    e.recipes.gtceu.circuit_assembler('quantum_mainframe_zpm_soldering_alloy')
+        .itemInputs(
+            '2x gtceu:hssg_frame',
+            '2x gtceu:quantum_processor_computer',
+            '48x gtceu:smd_capacitor',
+            '24x gtceu:smd_inductor',
+            '24x gtceu:ram_chip',
+            '24x gtceu:annealed_copper_double_wire')
+        .inputFluids(Fluid.of('gtceu:soldering_alloy', 288))
+        .itemOutputs('gtceu:quantum_processor_mainframe')
+        .duration(800)
+        .EUt(7680)
+
+    e.recipes.gtceu.circuit_assembler('quantum_mainframe_zpm_asmd')
+        .itemInputs(
+            '2x gtceu:hssg_frame',
+            '2x gtceu:quantum_processor_computer',
+            '12x gtceu:advanced_smd_capacitor',
+            '6x gtceu:advanced_smd_inductor',
+            '24x gtceu:ram_chip',
+            '24x gtceu:annealed_copper_double_wire')
+        .inputFluids(Fluid.of('gtceu:tin', 576))
+        .itemOutputs('gtceu:quantum_processor_mainframe')
+        .duration(800)
+        .EUt(7680)
+
+    e.recipes.gtceu.circuit_assembler('quantum_mainframe_zpm_asmd_soldering_alloy')
+        .itemInputs(
+            '2x gtceu:hssg_frame',
+            '2x gtceu:quantum_processor_computer',
+            '12x gtceu:advanced_smd_capacitor',
+            '6x gtceu:advanced_smd_inductor',
+            '24x gtceu:ram_chip',
+            '24x gtceu:annealed_copper_double_wire')
+        .inputFluids(Fluid.of('gtceu:soldering_alloy', 288))
+        .itemOutputs('gtceu:quantum_processor_mainframe')
+        .duration(800)
+        .EUt(7680)
+    //#endregion
+
+	// #region fix mixer recipes for colored steel
+	
+	e.replaceInput({id: 'gtceu:mixer/red_steel'}, 'gtceu:sterling_silver_dust', 'gtceu:rose_gold_dust')
+	e.replaceInput({id: 'gtceu:create_mixer/red_steel'}, 'gtceu:sterling_silver_dust', 'gtceu:rose_gold_dust')
+	e.replaceInput({id: 'gtceu:mixer/red_steel'}, 'gtceu:bismuth_bronze_dust', 'gtceu:brass_dust')
+	e.replaceInput({id: 'gtceu:create_mixer/red_steel'}, 'gtceu:bismuth_bronze_dust', 'gtceu:brass_dust')
+	e.replaceInput({id: 'gtceu:mixer/blue_steel'}, 'gtceu:rose_gold_dust', 'gtceu:sterling_silver_dust')
+	e.replaceInput({id: 'gtceu:create_mixer/blue_steel'}, 'gtceu:rose_gold_dust', 'gtceu:sterling_silver_dust')
+	e.replaceInput({id: 'gtceu:mixer/blue_steel'}, 'gtceu:brass_dust', 'gtceu:bismuth_bronze_dust')
+	e.replaceInput({id: 'gtceu:create_mixer/blue_steel'}, 'gtceu:brass_dust', 'gtceu:bismuth_bronze_dust')
+	
+	// #endregion
+
+	// #region fix centrifuge recipes for colored steel
+
+	e.replaceOutput({id: 'gtceu:centrifuge/decomposition_centrifuging__red_steel'}, 'gtceu:sterling_silver_dust', 'gtceu:rose_gold_dust')
+	e.replaceOutput({id: 'gtceu:centrifuge/decomposition_centrifuging__red_steel'}, 'gtceu:bismuth_bronze_dust', 'gtceu:brass_dust')
+	e.replaceOutput({id: 'gtceu:centrifuge/decomposition_centrifuging__blue_steel'}, 'gtceu:rose_gold_dust', 'gtceu:sterling_silver_dust')
+	e.replaceOutput({id: 'gtceu:centrifuge/decomposition_centrifuging__blue_steel'}, 'gtceu:brass_dust', 'gtceu:bismuth_bronze_dust')
+	
+	// #endregion
+
+	// #region Move MV superconductor to early HV instead of post-vac freezer
+	
+	e.remove({id: 'gtceu:shaped/hv_chemical_bath' })
+	e.shaped('gtceu:hv_chemical_bath', [
+        'ABC',
+        'DEA',
+        'FGF' 
+    ], {
+        A: 'gtceu:hv_conveyor_module',
+        B: 'gtceu:tempered_glass',
+        C: 'gtceu:gold_single_cable',
+        D: 'gtceu:hv_electric_pump',
+		// swap one of the tempered glass for a PE pipe to ensure they've finished the plastic part of MV
+        E: 'gtceu:polyethylene_normal_fluid_pipe', 
+		F: '#gtceu:circuits/hv',
+		G: 'gtceu:hv_machine_hull'
+    }).id('tfg:shaped/hv_chemical_bath')
+	
+	e.recipes.gtceu.chemical_bath('tfg:magnesium_diboride_cool_down_distilled_water')
+		.itemInputs('gtceu:hot_magnesium_diboride_ingot')
+        .inputFluids(Fluid.of('gtceu:distilled_water', 100))
+		.itemOutputs('gtceu:magnesium_diboride_ingot')
+		.duration(250)
+		.EUt(480)
+		
+	e.recipes.gtceu.chemical_bath('tfg:magnesium_diboride_cool_down')
+		.itemInputs('gtceu:hot_magnesium_diboride_ingot')
+        .inputFluids(Fluid.of('minecraft:water', 100))
+		.itemOutputs('gtceu:magnesium_diboride_ingot')
+		.duration(400)
+		.EUt(480)
+		
+	// #endregion
+  
+    // #region Add all glass colors to macerator/hammer
+    e.remove({id: "gtceu:macerator/macerate_glass"});
+    e.recipes.gtceu.macerator("gtceu:macerator/macerate_glass")
+        .itemInputs(
+            "#forge:glass"
+        )
+        .itemOutputs("gtceu:glass_dust")
+        .duration(20)
+        .EUt(2);
+
+    e.remove({id: "gtceu:macerator/macerate_glass_pane"});
+    e.recipes.gtceu.macerator("gtceu:macerator/macerate_glass_pane")
+        .itemInputs(
+            "#forge:glass_panes"
+        )
+        .itemOutputs("3x gtceu:tiny_glass_dust")
+        .duration(6)
+        .EUt(2)
+
+    e.replaceInput({id: "gtceu:shaped/glass_dust_hammer"},
+        "minecraft:glass",
+        "#forge:glass"
+    );
+    // #endregion
+
+    // #region Rich coal processing
+    e.recipes.gtceu.coke_oven("tfg:rich_coal_to_coke")
+        .itemInputs('gtceu:rich_raw_coal')
+        .itemOutputs('4x gtceu:coke_gem')
+        .outputFluids(Fluid.of('gtceu:creosote', 2000))
+        .duration(3240)
+
+    e.recipes.gtceu.pyrolyse_oven("tfg:rich_coal_to_tar")
+        .itemInputs('3x gtceu:rich_raw_coal')
+        .chancedOutput('gtceu:dark_ash_dust', 5000, 0)
+        .outputFluids(Fluid.of('gtceu:coal_tar', 3000))
+        .duration(288)
+        .EUt(96)
+        .circuit(8)
+
+    e.recipes.gtceu.pyrolyse_oven("tfg:rich_coal_to_coke_creosote")
+        .itemInputs('4x gtceu:rich_raw_coal')
+        .itemOutputs('16x gtceu:coke_gem')
+        .outputFluids(Fluid.of('gtceu:creosote', 8000))
+        .duration(576)
+        .EUt(64)
+        .circuit(1)
+
+    e.recipes.gtceu.pyrolyse_oven("tfg:coal_to_coal_gas")
+        .itemInputs('4x gtceu:rich_raw_coal')
+        .itemOutputs('16x gtceu:coke_gem')
+        .inputFluids(Fluid.of('gtceu:steam'))
+        .outputFluids(Fluid.of('gtceu:coal_gas', 4000))
+        .duration(288)
+        .EUt(96)
+        .circuit(22)
+
+    e.recipes.gtceu.pyrolyse_oven("tfg:coal_to_coke_creosote_nitrogen")
+        .itemInputs('4x gtceu:rich_raw_coal')
+        .itemOutputs('16x gtceu:coke_gem')
+        .inputFluids(Fluid.of('gtceu:nitrogen'))
+        .outputFluids(Fluid.of('gtceu:creosote', 8000))
+        .duration(288)
+        .EUt(96)
+        .circuit(2)
+    // #endregion
+
+    // #region Fix TFC hanging sign metal dupe for Macerator and Arc Furnace
+
+    const SIGN_METALS = [
+		"copper",
+		"bronze",
+		"black_bronze",
+		"bismuth_bronze",
+		"wrought_iron",
+		"steel",
+		"black_steel",
+		"red_steel",
+		"blue_steel"
+	];
+	
+    SIGN_METALS.forEach(metal => {
+        global.TFC_WOOD_TYPES.forEach(wood => {
+            e.remove(`gtceu:macerator/macerate_wood/hanging_sign/${metal}/${wood}`)
+            e.recipes.gtceu.macerator(`gtceu:macerator/macerate_wood/hanging_sign/${metal}/${wood}`)
+                .itemInputs(`tfc:wood/hanging_sign/${metal}/${wood}`)
+                .itemOutputs('gtceu:wood_dust')
+                .chancedOutput(`gtceu:tiny_${metal}_dust`, 3750, 0)
+                .duration(108)
+                .EUt(8)
+
+            e.remove(`gtceu:arc_furnace/arc_wood/hanging_sign/${metal}/${wood}`)
+            e.recipes.gtceu.arc_furnace(`gtceu:arc_furnace/macerate_wood/hanging_sign/${metal}/${wood}`)
+                .itemInputs(`tfc:wood/hanging_sign/${metal}/${wood}`)
+                .itemOutputs('gtceu:tiny_ash_dust')
+                .chancedOutput(`gtceu:${metal}_nugget`, 3750, 0)
+                .inputFluids(Fluid.of('gtceu:oxygen', 12))
+                .duration(12)
+                .EUt(30)
+        })
+    })
+    // #endregion
 }
